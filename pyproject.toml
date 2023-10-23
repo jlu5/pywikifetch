@@ -1,0 +1,20 @@
+[project]
+name = "pywikifetch"
+dynamic = ["version"]
+description = "Fetch and parse content from MediaWiki wikis"
+requires-python = ">=3.8"
+# TODO add remaining fields from https://github.com/pypa/sampleproject/blob/main/pyproject.toml#L43
+dependencies = [
+    "mwparserfromhell",
+    "beautifulsoup4"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pywikifetch.__version__"}
+
+[project.scripts]  # Optional
+wikifetch = "pywikifetch.wikifetch:main"
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
