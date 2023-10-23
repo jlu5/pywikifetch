@@ -178,8 +178,8 @@ async def _main():
         search_results = await wiki.search(args.query)
         logger.info("Search results: %s", ', '.join(search_results))
         text, url = await wiki.fetch(search_results[0], summary=args.summary, raw=args.raw)
-        logger.info('Pretty link: %s', url)
         print(text)
+        print(url)
 
 def main():
     asyncio.run(_main())
