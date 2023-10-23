@@ -142,9 +142,7 @@ class Wiki():
             url = og_url.attrs['content']
         else:
             # Use generic MediaWiki link as fallback (this doesn't look as nice)
-            url = self.baseurl.replace('api.php', 'index.php?' + urllib.parse.urlencode({
-                'title': page_title
-            }))
+            url = self.formatter.get_page_url(page_title)
 
         return (text, url)
 
@@ -163,14 +161,13 @@ class Wiki():
         return search_result_titles
 
 async def _main():
-    parser = argparse.ArgumentParser(
-        description="Fetch an article from a MediaWiki site")
-    parser.add_argument('base_url',
-        help='Wiki base URL, e.g. "en.wikipedia.org"')
+    parser = argparse.ArgumentParser( description="Fetch an article from a MediaWiki site")
+    parser.add_argument('base_url', help='Wiki base URL, e.g. "en.wikipedia.org"')
     parser.add_argument('query', help='Search query')
     parser.add_argument('-s', '--summary', action='store_true', help='Fetch only the first paragraph of a page')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show verbose debug info')
-    parser.add_argument('-r', '--raw', action='store_true', help='Print raw wikitext instead of formatting it as plain text')
+    parser.add_argument('-r', '--raw', action='store_true', help='Print raw wikitext instead of formatting '
+                        '(overrides -s and -m)')
     parser.add_argument('-m', '--markdown', action='store_true', help='Show results in Markdown instead of plain text')
     parser.add_argument('-V', '--version', action='version', version=f'pywikifetch {__version__}')
     args = parser.parse_args()
@@ -181,7 +178,7 @@ async def _main():
         search_results = await wiki.search(args.query)
         logger.info("Search results: %s", ', '.join(search_results))
         text, url = await wiki.fetch(search_results[0], summary=args.summary, raw=args.raw)
-        logger.info('Fetched: %s', url)
+        logger.info('Pretty link: %s', url)
         print(text)
 
 def main():
