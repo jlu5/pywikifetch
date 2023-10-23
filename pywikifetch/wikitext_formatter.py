@@ -12,41 +12,28 @@ import mwparserfromhell
 logger = logging.getLogger('wikifetch.formatter')
 
 class BaseFormatter():
-    def __init__(self, summary=False):
-        self._summary = summary
-
-    @property
-    def summary(self):
-        return self._summary
-
-    @summary.setter
-    def summary(self, value):
-        self._summary = value
-
-    def format(self, wikitext: str) -> str:
-        """Entrypoint to the formatter"""
+    def format_node(self, node):
         raise NotImplementedError
 
-class PlainTextFormatter(BaseFormatter):
-    """Formats Wikitext as plain text"""
-
-    def format(self, wikitext: str) -> str:
+    def format(self, wikitext: str, summary: bool = False) -> str:
         """Entrypoint to the formatter"""
         markup = mwparserfromhell.parse(wikitext)
         strbuf = io.StringIO()
 
-        nodes = markup.get_sections[0] if self.summary else markup.nodes
-
-        for node in nodes:
+        for node in markup.nodes:
+            if summary and isinstance(node, mwparserfromhell.nodes.heading.Heading):
+                break
             for output in self.format_node(node):
                 assert isinstance(output, str), f'expected str, got {type(output)} for node {node}'
                 strbuf.write(output)
         s = strbuf.getvalue()
-        s = s.lstrip()
         # Limit consecutive newlines to 2 in a row, as we can end up with a lot of
         # unused space otherwise from deleting unsupported & invisible items
         s = re.sub(r'\s+?\n\s+?\n\s+', r'\n\n', s)
-        return s
+        return s.strip()
+
+class PlainTextFormatter(BaseFormatter):
+    """Formats Wikitext as plain text"""
 
     @functools.singledispatchmethod
     def format_node(self, node):
@@ -67,6 +54,7 @@ class PlainTextFormatter(BaseFormatter):
     # Strip currently unsupported features
     _html_tags_remove = {
         'gallery',
+        'ref',
     }
     @format_node.register
     def format_tag(self, node: mwparserfromhell.nodes.tag.Tag):
@@ -105,8 +93,8 @@ class PlainTextFormatter(BaseFormatter):
 
 class MarkdownFormatter(PlainTextFormatter):
     """Formats Wikitext as Markdown"""
-    def __init__(self, summary=False, baseurl=None):
-        super().__init__(summary=summary)
+    def __init__(self, baseurl=None):
+        super().__init__()
         # API base URL, used to format links to other wiki pages
         self.baseurl = baseurl
 
@@ -126,6 +114,8 @@ class MarkdownFormatter(PlainTextFormatter):
     _html_tags_map = {}
     @format_node.register
     def format_tag(self, node: mwparserfromhell.nodes.tag.Tag):
+        if str(node.tag) in self._html_tags_remove:
+            return
         tag_output = None
         if markdown_tag := self._tag_to_markdown.get(str(node.tag)):
             yield markdown_tag
@@ -192,8 +182,8 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
 
-    formatter = PlainTextFormatter(summary=args.summary)
-    result = formatter.format(sys.stdin.read())
+    formatter = PlainTextFormatter()
+    result = formatter.format(sys.stdin.read(), summary=args.summary)
     print(result)
 
 if __name__ == '__main__':

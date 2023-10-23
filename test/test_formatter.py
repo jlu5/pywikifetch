@@ -84,10 +84,13 @@ This text after a heading will be ignored in summary mode.
 
 ### Subsection
 
-Hello world
-"""
+Hello world"""
         self.assertEqual(expected, self._formatter.format(inp))
-        # TODO test summary mode
+        expected = """\
+This is a Wikitext snippet with bold, italicized, and bold + italicized text. It also includes links to another wiki page and an external URL.
+
+This is the second paragraph."""
+        self.assertEqual(expected, self._formatter.format(inp, summary=True))
 
     def test_strip_newlines(self):
         """Test that > 2 newlines left by unsupported items are collapsed to 2"""
@@ -108,9 +111,7 @@ Hello world
 ## References
 
 
-## External links
-
-"""
+## External links"""
         self.assertEqual(expected, self._formatter.format(inp))
 
 class MarkdownFormatterTest(unittest.TestCase):

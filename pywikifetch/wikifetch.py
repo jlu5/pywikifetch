@@ -36,12 +36,12 @@ class Wiki():
         'User-Agent': f'Mozilla/5.0 (compatible) pywikifetch/{__version__}'
     }
 
-    def __init__(self, baseurl, headers=None, bs4_parser='html.parser', formatter_cls=None):
+    def __init__(self, baseurl, headers=None, bs4_parser='html.parser', markdown=False):
         self._input_baseurl = baseurl
         self.baseurl = None
         self.http_headers = headers or self._DEFAULT_HEADERS
         self.bs4_parser = bs4_parser
-        self.formatter = formatter_cls() if formatter_cls else PlainTextFormatter()
+        self.markdown = markdown
 
         self._session = None
 
@@ -80,6 +80,10 @@ class Wiki():
             baseurl = await self._guess_api_url(baseurl)
 
         self.baseurl = baseurl
+        if self.markdown:
+            self.formatter = MarkdownFormatter(baseurl)
+        else:
+            self.formatter = PlainTextFormatter()
 
     async def __aenter__(self):
         self._session = aiohttp.ClientSession(raise_for_status=True)
@@ -126,8 +130,7 @@ class Wiki():
         if raw:
             text = content
         else:
-            self.formatter.summary = summary
-            text = self.formatter.format(content)
+            text = self.formatter.format(content, summary=summary)
 
         soup = self._get_bs4(html_head)
         if canonical_link := soup.find('link', rel='canonical'):
@@ -173,8 +176,7 @@ async def _main():
 
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING)
 
-    formatter_cls = MarkdownFormatter if args.markdown else PlainTextFormatter
-    async with Wiki(args.base_url, formatter_cls=formatter_cls) as wiki:
+    async with Wiki(args.base_url, markdown=args.markdown) as wiki:
         search_results = await wiki.search(args.query)
         logger.info("Search results: %s", ', '.join(search_results))
         text, url = await wiki.fetch(search_results[0], summary=args.summary, raw=args.raw)
