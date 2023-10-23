@@ -99,7 +99,8 @@ class MarkdownFormatter(PlainTextFormatter):
         self.baseurl = baseurl
 
     # This registers a new singledispatchmethod for just the subclass, with unhandled calls passed into the superclass'
-    # method. This works around singledispatchmethod not natively supporting subclasses: https://github.com/python/cpython/issues/80638
+    # method. This works around singledispatchmethod not natively supporting subclasses:
+    # https://github.com/python/cpython/issues/80638
     @functools.singledispatchmethod
     def format_node(self, node):
         return super().format_node(node)

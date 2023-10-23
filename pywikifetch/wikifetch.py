@@ -44,6 +44,7 @@ class Wiki():
         self.markdown = markdown
 
         self._session = None
+        self.formatter = None
 
     def _get_bs4(self, *args, **kwargs):
         return BeautifulSoup(*args, features=self.bs4_parser, **kwargs)
