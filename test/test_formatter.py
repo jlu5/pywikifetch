@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import unittest
 
 from pywikifetch.wikitext_formatter import MarkdownFormatter, PlainTextFormatter
@@ -57,6 +58,22 @@ class PlainTextFormatterTest(unittest.TestCase):
 
         inp = "[https://example.com example link]"
         expected = 'example link'
+        self.assertEqual(expected, self._formatter.format(inp))
+
+    def test_list_unordered(self):
+        inp = """\
+* Level 1 item 1
+* Level 1 item 2
+** Level 2 item 1
+*** Level 3 item
+** Level 2 item 2
+"""
+        expected = """\
+* Level 1 item 1
+* Level 1 item 2
+  * Level 2 item 1
+    * Level 3 item
+  * Level 2 item 2"""
         self.assertEqual(expected, self._formatter.format(inp))
 
     def test_full_article(self):
@@ -183,4 +200,5 @@ class MarkdownFormatterTest(unittest.TestCase):
     # TODO add full article test
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     unittest.main()

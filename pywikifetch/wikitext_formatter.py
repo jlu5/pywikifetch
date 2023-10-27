@@ -2,6 +2,7 @@
 import argparse
 import functools
 import io
+import itertools
 import logging
 import re
 import sys
@@ -12,8 +13,26 @@ import mwparserfromhell
 logger = logging.getLogger('wikifetch.formatter')
 
 class BaseFormatter():
+    def __init__(self):
+        self.list_level = 0
+
     def format_node(self, node):
+        """Format a Wikitext node"""
         raise NotImplementedError
+
+    def format_list(self):
+        """Display the markup for a list once all consecutive list tokens have been parsed
+
+        The current list level is stored in self.list_level"""
+        raise NotImplementedError
+
+    def pre_format_node(self, node):
+        """Function called before each node is formatted"""
+        is_list_tag = isinstance(node, mwparserfromhell.nodes.tag.Tag) and str(node.tag) == 'li'
+        if self.list_level and not is_list_tag:
+            logging.debug('Ending list at level %s', self.list_level)
+            yield from self.format_list()
+            self.list_level = 0
 
     def format(self, wikitext: str, summary: bool = False) -> str:
         """Entrypoint to the formatter"""
@@ -21,9 +40,10 @@ class BaseFormatter():
         strbuf = io.StringIO()
 
         for node in markup.nodes:
+            logger.debug('format: %s %r', type(node), node)
             if summary and isinstance(node, mwparserfromhell.nodes.heading.Heading):
                 break
-            for output in self.format_node(node):
+            for output in itertools.chain(self.pre_format_node(node), self.format_node(node)):
                 assert isinstance(output, str), f'expected str, got {type(output)} for node {node}'
                 strbuf.write(output)
         s = strbuf.getvalue()
@@ -51,6 +71,13 @@ class PlainTextFormatter(BaseFormatter):
     def format_text(self, node: mwparserfromhell.nodes.text.Text):
         yield str(node)
 
+    def increment_list_counter(self, node: mwparserfromhell.nodes.text.Text):
+        # Lists are parsed into a sequence of consecutive 'li' tags
+        # To properly track the list level we need to count how many of these we see in a row.
+        # Of course, this is stateful, but oh well...
+        if str(node.tag) == 'li':
+            self.list_level += 1
+
     # Strip currently unsupported features
     _html_tags_remove = {
         'gallery',
@@ -58,6 +85,7 @@ class PlainTextFormatter(BaseFormatter):
     }
     @format_node.register
     def format_tag(self, node: mwparserfromhell.nodes.tag.Tag):
+        self.increment_list_counter(node)
         if str(node.tag) in self._html_tags_remove:
             return
         yield from self.format_node(node.contents)
@@ -78,8 +106,7 @@ class PlainTextFormatter(BaseFormatter):
         link_text = node.title or node.url
         yield from self.format_node(link_text)
 
-    # Markdown-esque formatters
-
+    ### Markdown-esque formatters
     @format_node.register
     def format_heading(self, node: mwparserfromhell.nodes.heading.Heading):
         heading_hashtags = '#' * node.level
@@ -89,7 +116,9 @@ class PlainTextFormatter(BaseFormatter):
         heading_text = ''.join(self.format_node(node.title))
         yield heading_text.strip()
 
-    # TODO add support for lists
+    def format_list(self):
+        yield '  ' * (self.list_level-1)
+        yield '*'
 
 class MarkdownFormatter(PlainTextFormatter):
     """Formats Wikitext as Markdown"""
@@ -117,6 +146,7 @@ class MarkdownFormatter(PlainTextFormatter):
     def format_tag(self, node: mwparserfromhell.nodes.tag.Tag):
         if str(node.tag) in self._html_tags_remove:
             return
+        self.increment_list_counter(node)
         tag_output = None
         if markdown_tag := self._tag_to_markdown.get(str(node.tag)):
             yield markdown_tag
