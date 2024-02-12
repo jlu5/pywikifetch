@@ -111,15 +111,13 @@ class PlainTextFormatter(BaseFormatter):
     @format_node.register
     def format_heading(self, node: mwparserfromhell.nodes.heading.Heading):
         heading_hashtags = '#' * node.level
-        yield heading_hashtags
-        yield ' '
+        yield heading_hashtags + ' '
         # Strip spaces around the heading text. Technically this isn't necessary, but makes the output cleaner
         heading_text = ''.join(self.format_node(node.title))
         yield heading_text.strip()
 
     def format_list(self):
-        yield '  ' * (self.list_level-1)
-        yield '*'
+        yield '  ' * (self.list_level-1) + '*'
 
 class MarkdownFormatter(PlainTextFormatter):
     """Formats Wikitext as Markdown"""
@@ -185,18 +183,14 @@ class MarkdownFormatter(PlainTextFormatter):
             # ![](https://example.com/blah.png hover text)
             image_page_title = target.replace('File:', 'Special:Filepath/')
             url = self.get_page_url(image_page_title)
-            yield '![]('
-            yield url
-            yield ')'
+            yield f'![]({url})'
             return
 
         url = self.get_page_url(node.title)
         # [link](text)
         yield '['
         yield from formatted_link_text
-        yield ']('
-        yield url
-        yield ')'
+        yield f']({url})'
 
     @format_node.register
     def format_external_link(self, node: mwparserfromhell.nodes.external_link.ExternalLink):
