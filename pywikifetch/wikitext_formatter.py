@@ -17,6 +17,12 @@ class BaseFormatter():
         self.parent = parent
         self.list_level = 0
 
+    # FIXME: this can probably move to the parent class
+    def get_page_url(self, page):
+        return urllib.parse.urljoin(self.parent.baseurl, 'index.php?' + urllib.parse.urlencode({
+            'title': page
+        }))
+
     def format_node(self, node):
         """Format a Wikitext node"""
         raise NotImplementedError
@@ -154,11 +160,6 @@ class MarkdownFormatter(PlainTextFormatter):
             yield markdown_tag
         elif not node.wiki_markup and not node.self_closing:
             yield f'</{tag_output}>'
-
-    def get_page_url(self, page):
-        return urllib.parse.urljoin(self.parent.baseurl, 'index.php?' + urllib.parse.urlencode({
-            'title': page
-        }))
 
     @format_node.register
     def format_wikilink(self, node: mwparserfromhell.nodes.wikilink.Wikilink):
