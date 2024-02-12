@@ -13,7 +13,8 @@ import mwparserfromhell
 logger = logging.getLogger('wikifetch.formatter')
 
 class BaseFormatter():
-    def __init__(self):
+    def __init__(self, parent):
+        self.parent = parent
         self.list_level = 0
 
     def format_node(self, node):
@@ -122,10 +123,6 @@ class PlainTextFormatter(BaseFormatter):
 
 class MarkdownFormatter(PlainTextFormatter):
     """Formats Wikitext as Markdown"""
-    def __init__(self, baseurl=None):
-        super().__init__()
-        # API base URL, used to format links to other wiki pages
-        self.baseurl = baseurl
 
     # This registers a new singledispatchmethod for just the subclass, with unhandled calls passed into the superclass'
     # method. This works around singledispatchmethod not natively supporting subclasses:
@@ -161,7 +158,7 @@ class MarkdownFormatter(PlainTextFormatter):
             yield f'</{tag_output}>'
 
     def get_page_url(self, page):
-        return urllib.parse.urljoin(self.baseurl, 'index.php?' + urllib.parse.urlencode({
+        return urllib.parse.urljoin(self.parent.baseurl, 'index.php?' + urllib.parse.urlencode({
             'title': page
         }))
 
@@ -176,7 +173,7 @@ class MarkdownFormatter(PlainTextFormatter):
         # Return the displayed text for the link, or the title of the target page if none is set
         link_text = node.text or node.title
         formatted_link_text = self.format_node(link_text)
-        if not self.baseurl:
+        if not self.parent.baseurl:
             if not is_image:
                 # No baseurl provided, drop the link
                 yield from formatted_link_text
@@ -213,7 +210,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
 
-    formatter = PlainTextFormatter()
+    formatter = PlainTextFormatter(None)
     result = formatter.format(sys.stdin.read(), summary=args.summary)
     print(result)
 

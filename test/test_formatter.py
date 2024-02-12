@@ -4,9 +4,12 @@ import unittest
 
 from pywikifetch.wikitext_formatter import MarkdownFormatter, PlainTextFormatter
 
+class MockWiki():
+    baseurl = 'https://en.wikipedia.org/w/api.php'
+
 class PlainTextFormatterTest(unittest.TestCase):
     def setUp(self):
-        self._formatter = PlainTextFormatter()
+        self._formatter = PlainTextFormatter(MockWiki())
 
     def test_simple(self):
         inp = expected = 'Hello world'
@@ -133,7 +136,7 @@ This is the second paragraph."""
 
 class MarkdownFormatterTest(unittest.TestCase):
     def setUp(self):
-        self._formatter = MarkdownFormatter(baseurl='https://en.wikipedia.org/w/api.php')
+        self._formatter = MarkdownFormatter(MockWiki())
 
     def test_simple(self):
         inp = expected = 'Hello world'
